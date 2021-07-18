@@ -1,4 +1,4 @@
-from mm import mmread
+from mmparse import mmread
 
 def test_mm_read_pattern():
     with mmread('test_data/karate.mtx') as r:
