@@ -9,15 +9,39 @@ def get_mm_type_converter(t):
     return _converters[t]
 
 
-def _row_iter(line_num, f, mm_type, converter):
+def _coord_row_iter(line_num, f, converter, header):
+    pattern = header["mm_type"] == "pattern"
     line = f.readline()
     while line:
         line = line.strip()
         row = line.split()
-        if mm_type == "pattern":
+        if pattern:
             yield line_num, int(row[0]), int(row[1]), True
         else:
             yield line_num, int(row[0]), int(row[1]), converter(row[2])
+        line = f.readline()
+        line_num += 1
+
+
+def _array_iter(line_num, f, converter, header):
+    nrows = header["nrows"]
+    general = header["mm_storage"] == "general"
+    pattern = header["mm_type"] == "pattern"
+    i = -1
+    j = 0
+    line = f.readline()
+    while line:
+        i += 1
+        if i == nrows:
+            j += 1
+            if general:
+                i = 0
+            else:
+                i = j
+        if pattern:
+            yield line_num, i, j, True
+        else:
+            yield line_num, i, j, converter(line.strip())
         line = f.readline()
         line_num += 1
 
@@ -64,12 +88,9 @@ def mmread(filename, opener=Path.open, collection=False):
             lower_line = line.strip().lower()
             if line_num == 0 and lower_line.startswith("%%matrixmarket"):
                 _, mm_format, mm_type, mm_storage = lower_line[14:].split()
+
                 if mm_format not in ("coordinate", "array"):
                     raise TypeError(f"Invalid format {mm_format}")
-
-                assert (
-                    mm_format == "coordinate"
-                ), "mmparse currently only supports coordinate format"
 
                 if mm_type not in ("integer", "real", "pattern"):
                     raise TypeError(f"Invalid type {mm_type}")
@@ -90,7 +111,7 @@ def mmread(filename, opener=Path.open, collection=False):
             elif (
                 line_num == 1 and got_mm_header and lower_line.startswith("%%graphblas")
             ):
-                header["gb_type"] = l[11:]
+                header["gb_type"] = line[11:]
 
             elif line.lstrip().startswith("%"):
                 line_num += 1
@@ -104,16 +125,18 @@ def mmread(filename, opener=Path.open, collection=False):
                     raise TypeError(
                         f"Invalid data row {data_row} on line {line_num} must have only 2 or 3 entries"
                     )
-                if len(data_row) == 2:
-                    # a dense matrix
+                if mm_format == "array":
                     nrows, ncols = data_row
                     nvals = nrows * ncols
+                    _iter = _array_iter
                 else:
                     nrows, ncols, nvals = data_row
+                    _iter = _coord_row_iter
                 header.update(nrows=nrows, ncols=ncols, nvals=nvals)
                 break
             line_num += 1
             line = f.readline()
 
         converter = _converters[mm_type]
-        yield header, _row_iter(line_num, f, header["mm_type"], converter)
+
+        yield header, _iter(line_num, f, converter, header)
