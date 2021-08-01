@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='mmparse',
-    version='0.5',
+    version='0.6',
     description='Parse Matrix Market Files',
     author='Michel Pelletier',
     author_email='michel@graphegon.com',
