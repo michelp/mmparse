@@ -16,9 +16,9 @@ def _coord_row_iter(line_num, f, converter, header):
         line = line.strip()
         row = line.split()
         if pattern:
-            yield line_num, int(row[0]), int(row[1]), True
+            yield line_num, int(row[0]) - 1, int(row[1]) - 1, True
         else:
-            yield line_num, int(row[0]), int(row[1]), converter(row[2])
+            yield line_num, int(row[0]) - 1, int(row[1]) - 1, converter(row[2])
         line = f.readline()
         line_num += 1
 
