@@ -8,5 +8,6 @@ setup(
     author_email='michel@graphegon.com',
     url='https://github.com/michelp/mmparse',
     packages=['mmparse'],
+    install_requires=["requests"],
     tests_require=["pytest"],
 )
